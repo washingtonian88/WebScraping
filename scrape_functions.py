@@ -1,4 +1,5 @@
 from bs4 import BeautifulSoup
+from time import sleep
 import requests
 import pandas as pd 
 import re
@@ -10,8 +11,10 @@ def pull_spread(gameID='401242804'):
     if debug:
         print('\tParsing gameID:\t' + gameID)
     finalSpread = None
+    finalOU = None
     url  = 'https://www.espn.com/nba/game?gameId={}'.format(gameID)
     page = requests.get(url)
+    sleep(0.1)
     soup = BeautifulSoup(page.text, 'html.parser')
     scores = soup.find_all('td',attrs={'class':"score"})
     if len(scores) > 0: # Game is in the future
@@ -27,6 +30,8 @@ def pull_spread(gameID='401242804'):
         name2  = soup.find_all('span',attrs={'class':"short-name"})[1].get_text()
         finalSpread = int(soup.find_all('td',attrs={'class':"final-score"})[0].get_text().strip()) - \
                       int(soup.find_all('td',attrs={'class':"final-score"})[1].get_text().strip())
+        finalOU = int(soup.find_all('td',attrs={'class':"final-score"})[0].get_text().strip()) + \
+                  int(soup.find_all('td',attrs={'class':"final-score"})[1].get_text().strip())
         if finalSpread > 0:
             finalSpread = soup.find_all('td',attrs={'class':"team-name"})[0].get_text() + \
                 ' ' + str(finalSpread)
@@ -36,7 +41,7 @@ def pull_spread(gameID='401242804'):
     else: # Game from past, does not have spread data
         return None
     return {'Team1':name1,'Team2':name2,'predictedSpread':spread,'OU':ou,\
-            'finalSpread':finalSpread,'gameID':gameID}
+            'finalSpread':finalSpread,'finalOU':finalOU,'gameID':gameID}
 
 
 # Get gameID's from dates
@@ -45,6 +50,7 @@ def pull_dates(date='20200910'):
         print('Looking at date:\t' + date)
     url   = 'https://www.espn.com/nba/scoreboard/_/date/{}'.format(date)
     page  = requests.get(url)
+    sleep(0.1)
     soup  = BeautifulSoup(page.text, 'html.parser')
     mystr = soup.find_all('script')[13].get_text()
     m     = re.compile(r"(game\?gameId=\d+)").findall(mystr)
